@@ -51,7 +51,7 @@ export const wingsScheduleDetailsSchema = z.array(z.object({ TEXT: z.string() })
 export type WingsScheduleDetails = z.infer<typeof wingsScheduleDetailsSchema>;
 
 export const parsedWingsSchedulesSchema = z.map(
-  z.number(),
+  z.string(),
   z.object({
     eventName: z.string(),
     startTime: z.string(),

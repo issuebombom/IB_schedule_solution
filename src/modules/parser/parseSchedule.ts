@@ -11,7 +11,7 @@ export const parseWingsSchedule = (input: WingsSchedules): ParsedWingsSchedules 
   // validation
   const data = wingsSchedulesSchema.parse(input);
 
-  // NOTE: Map 구조로 만들어서 추후 참조사항 추가 시 O(1) 접근을 통한 업데이트가 가능하도록 한다.
+  // NOTE: Map 구조로 만들어서 추후 참조사항 추가 및 비교 수정에 유리하도록 한다.
   const parsedData = new Map(
     data.map((obj) => {
       // 시간 데이터 전처리
@@ -31,7 +31,7 @@ export const parseWingsSchedule = (input: WingsSchedules): ParsedWingsSchedules 
       ).toISOString(); // toString
 
       return [
-        parseInt(obj.EVENT_NO),
+        obj.EVENT_NO,
         {
           eventName: obj.FNC_NAME_ORG,
           startTime,
@@ -42,7 +42,7 @@ export const parseWingsSchedule = (input: WingsSchedules): ParsedWingsSchedules 
           manager: obj.SALE_MANAGER,
           eventNumber: obj.EVENT_NO, // ID로 사용
           eventRsvnNumber: obj.FNC_RSVN_NO,
-          details: [''],
+          details: [],
         },
       ];
     }),

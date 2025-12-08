@@ -8,6 +8,8 @@ const envSchema = z.object({
   WINGS_USER_PW: z.string().min(1),
   WINGS_SCHEDULE_URL: z.string().min(1),
   WINGS_SCHEDULE_DETAILS_URL: z.string().min(1),
+
+  SNAPSHOT_DIR: z.string().min(1),
 });
 
 // 2. process.env 검증 및 결과 객체 생성
