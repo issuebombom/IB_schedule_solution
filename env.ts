@@ -9,6 +9,10 @@ const envSchema = z.object({
   WINGS_SCHEDULE_URL: z.string().min(1),
   WINGS_SCHEDULE_DETAILS_URL: z.string().min(1),
 
+  GOOGLE_CLIENT_EMAIL: z.string().min(1),
+  GOOGLE_PRIVATE_KEY: z.string().min(1),
+  GOOGLE_CALENDAR_ID: z.string().min(1),
+
   SNAPSHOT_DIR: z.string().min(1),
 });
 

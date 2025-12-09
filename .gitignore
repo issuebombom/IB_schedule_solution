@@ -141,3 +141,5 @@ dist
 # Etc.
 docs
 test.ts
+todolist.md
+snapshot.json
