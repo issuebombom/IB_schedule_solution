@@ -67,3 +67,8 @@ export const parsedWingsSchedulesSchema = z.map(
 );
 
 export type ParsedWingsSchedules = z.infer<typeof parsedWingsSchedulesSchema>;
+
+// ParsedWingsSchedules의 value만 따로 타입 지정
+type ValueOfZodMap<T extends z.ZodMap<any, any>> =
+  T extends z.ZodMap<any, infer V> ? z.infer<V> : never;
+export type WingsSchedulesValues = ValueOfZodMap<typeof parsedWingsSchedulesSchema>;
