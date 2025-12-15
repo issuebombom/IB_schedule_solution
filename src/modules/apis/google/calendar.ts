@@ -3,7 +3,7 @@ import { ENV } from '../../../../env';
 import { google } from 'googleapis';
 import { WingsSchedulesValues } from '../../types/schedules.type';
 import axios from 'axios';
-import { parseBatchGoogleResponse, ParsedBatchResponse } from '../../parser/parseSchedule';
+import { parseBatchGoogleResponse } from '../../parser/parseSchedule';
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
@@ -57,7 +57,7 @@ export const createBatchGoogleCalendarEvent = async (events: WingsSchedulesValue
   const responseText = res.data;
 
   // 파싱(전처리)
-  const parsedData: ParsedBatchResponse = parseBatchGoogleResponse(responseText);
+  const parsedData = parseBatchGoogleResponse(responseText);
 
   return parsedData;
 };
@@ -83,7 +83,7 @@ export const createOneGoogleCalendarEvent = async (schedule: WingsSchedulesValue
 // 캘린더 이벤트 생성 요청 템플릿
 const createEventRequestTemplate = (s: WingsSchedulesValues) => {
   const event = {
-    summary: s.eventName,
+    summary: `[${s.place.slice(0, 3)}] ${s.eventName}`, // [장소명] 행사명
     description: descriptionTemplate(s),
     location: s.place,
     colorId: (Math.floor(s.place.trim().length % 11) + 1).toString(), // 1 ~ 11 값으로 이벤트 색상 지정

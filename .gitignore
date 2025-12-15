@@ -142,4 +142,4 @@ dist
 docs
 test.ts
 todolist.md
-snapshot.json
+tmp/*.json

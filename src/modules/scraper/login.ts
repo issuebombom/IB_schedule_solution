@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import { ENV } from '../../../env';
 import puppeteer, { Browser, TimeoutError } from 'puppeteer';
-import { waitForNavigationWithRetry } from '../utils/requestRetry';
 
 export const wingsLogin = async () => {
   let browser: Browser | null = null;
