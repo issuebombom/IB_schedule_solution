@@ -6,6 +6,7 @@ import {
   WingsSchedules,
   wingsSchedulesSchema,
 } from '../types/schedules.type';
+import { ParsedBatchResponse, ParsedGoogleCalendar } from '../types/calendar.type';
 
 export const parseWingsSchedule = (input: WingsSchedules): ParsedWingsSchedules => {
   // validation
@@ -60,8 +61,8 @@ export const parseOneWingsScheduleDetails = (input: WingsScheduleDetails) => {
 };
 
 // 구글 캘린더 배치 이벤트 등록 요청 후 응답 데이터(TEXT)에 대한 파싱
-export const parseBatchGoogleResponse = (raw: string) => {
-  const result: Record<string, ParsedBatchResponse> = {};
+export const parseBatchGoogleResponse = (raw: string): ParsedGoogleCalendar => {
+  const parsedData: ParsedGoogleCalendar = new Map();
 
   // boundary block 단위로 분리
   const parts = raw.split(/--batch_[A-Za-z0-9]+/g);
@@ -71,30 +72,13 @@ export const parseBatchGoogleResponse = (raw: string) => {
 
     // 1) Content-ID 숫자 추출
     const idMatch = part.match(/Content-ID:\s*<response-item\d+:\s*(\d+)>/);
-    if (!idMatch) continue;
-    const key = idMatch[1] as string; // 숫자 문자열 (캡처 그룹 결과: string 보장)
-
     // 2) JSON 본문 추출
     const jsonMatch = part.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) continue;
-
-    let parsed;
-    try {
-      parsed = JSON.parse(jsonMatch[0]);
-    } catch {
-      continue;
-    }
-
-    result[key] = parsed;
+    if (!idMatch || !jsonMatch) continue;
+    const key = idMatch[1] as string; // 숫자 문자열 (캡처 그룹 결과: string 보장)
+    const value = JSON.parse(jsonMatch[0]) as ParsedBatchResponse;
+    parsedData.set(key, value);
   }
 
-  return result;
-};
-
-export type ParsedBatchResponse = {
-  kind?: string;
-  id?: string;
-  status?: string;
-  htmlLink?: string;
-  [k: string]: any;
+  return parsedData;
 };
