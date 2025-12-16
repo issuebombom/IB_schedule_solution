@@ -1,7 +1,28 @@
-import { ParsedWingsSchedules } from '../types/schedules.type';
+import { ParsedWingsSchedules, WingsSchedulesValues } from '../types/schedules.type';
 
-export const updateWingsSchedules = () => {};
+export const updateNewWingsSchedules = (
+  newEventNumbers: Set<string>,
+  currSchedules: ParsedWingsSchedules,
+  cacheSchedules: ParsedWingsSchedules,
+) => {
+  newEventNumbers.forEach((eNumber: string) => {
+    const newSchedule = currSchedules.get(eNumber);
+    if (newSchedule) {
+      cacheSchedules.set(eNumber, newSchedule);
+    }
+  });
+  // ! DEBUG
+  console.log(`총 ${newEventNumbers.size}개의 신규 스케줄을 업데이트했습니다.`);
+};
 
+export const updateChangedWginsSchedules = () => {};
+
+/**
+ * 최신 스크랩 데이터와 캐시 데이터를 비교한다.
+ * 스크랩 데이터가 캐시 데이터에 존재하지 않을 경우 신규 데이터로 본다
+ * 스크랩 데이터가 캐시 데이터에 존재할 경우 변경 사항 유무를 체크한다.
+ * 변경사항이 있을 경우
+ */
 export const compareWingsSchedules = (
   currSchedules: ParsedWingsSchedules,
   prevSchedules: ParsedWingsSchedules,
