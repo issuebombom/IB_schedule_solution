@@ -3,7 +3,8 @@ import { ENV } from '../../../../env';
 import { google } from 'googleapis';
 import { WingsSchedulesValues } from '../../types/schedules.type';
 import axios from 'axios';
-import { parseBatchGoogleResponse } from '../../parser/parseSchedule';
+import { parseBatchGoogleResponse, parseGoogleCalendar } from '../../parser/parseCalendar';
+import { ParsedGoogleCalendar } from '../../types/calendar.type';
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
@@ -25,7 +26,9 @@ const calendar = google.calendar({ version: 'v3', auth: authClient });
  * 파싱 결과 구성은 eventNumber로 접근 시 캘린더의 eventId 획득을 골자로 한다.
  * 해당 기능은 응답을 기다려야 하며, 데이터양에 따른 서버 블로킹을 유발하므로 필요 시 백그라운드에서 수행할 것이 고려된다.
  */
-export const createBatchGoogleCalendarEvent = async (events: WingsSchedulesValues[]) => {
+export const createBatchGoogleCalendarEvent = async (
+  events: WingsSchedulesValues[],
+): Promise<ParsedGoogleCalendar> => {
   const batchRequestUrl = 'https://www.googleapis.com/batch/calendar/v3';
   const boundary = 'batch_boundary';
   const responseFieldsQuery = 'fields=kind,id,status,htmlLink'; // 응답 데이터 필드 선택 (전체를 받지 않음)
@@ -56,10 +59,46 @@ export const createBatchGoogleCalendarEvent = async (events: WingsSchedulesValue
 
   const responseText = res.data;
 
-  // 파싱(전처리)
-  const parsedData = parseBatchGoogleResponse(responseText);
+  // 파싱: 구글 배치 응답 TEXT에 대한 파싱 (content-id, httpStatus, resBody 확보)
+  const batchGoogleResponse = parseBatchGoogleResponse(responseText);
+  // 파싱: 배치 응답의 Body에 대한 캐시 캘린더 형식으로의 파싱
+  const parsedGoogleCalendar = parseGoogleCalendar(batchGoogleResponse);
 
-  return parsedData;
+  return parsedGoogleCalendar;
+};
+
+export const deleteBatchGoogleCalendarEvent = async (eventIds: Map<string, string>) => {
+  const batchRequestUrl = 'https://www.googleapis.com/batch/calendar/v3';
+  const boundary = 'batch_boundary';
+  const { token: accessToken } = await authClient.getAccessToken(); // 배치는 accessToken을 요구한다.
+
+  let body = '';
+  let idx = 0;
+
+  eventIds.forEach((eventId, eventNumber) => {
+    body += `--${boundary}\r\n`;
+    body += `Content-Type: application/http\r\n`;
+    body += `Content-ID: <item${idx + 1}: ${eventNumber}>\r\n\r\n`;
+    body += `DELETE /calendar/v3/calendars/${encodeURIComponent(ENV.GOOGLE_CALENDAR_ID)}/events/${eventId}\r\n`;
+  });
+  body += `--${boundary}--`;
+
+  // Batch 요청 (DELETE는 빈 응답 본문 반환)
+  const res = await axios.post(batchRequestUrl, body, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': `multipart/mixed; boundary=${boundary}`,
+    },
+  });
+  const responseText: string = res.data;
+  const batchGoogleResponse = parseBatchGoogleResponse(responseText);
+
+  for (const [key, value] of batchGoogleResponse) {
+    // 삭제 실패 시 알림
+    if (value.httpStatus !== '204') {
+      console.log(`구글 캘린더에서 해당 이벤트 삭제 실패 : ${key}`);
+    }
+  }
 };
 
 // 캘린더 단일 이벤트 등록

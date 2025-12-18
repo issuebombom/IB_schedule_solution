@@ -59,26 +59,3 @@ export const parseOneWingsScheduleDetails = (input: WingsScheduleDetails) => {
   const parsedData = data.map((obj) => obj.TEXT.trim());
   return parsedData;
 };
-
-// 구글 캘린더 배치 이벤트 등록 요청 후 응답 데이터(TEXT)에 대한 파싱
-export const parseBatchGoogleResponse = (raw: string): ParsedGoogleCalendar => {
-  const parsedData: ParsedGoogleCalendar = new Map();
-
-  // boundary block 단위로 분리
-  const parts = raw.split(/--batch_[A-Za-z0-9]+/g);
-
-  for (const part of parts) {
-    if (!part.includes('Content-ID')) continue;
-
-    // 1) Content-ID 숫자 추출
-    const idMatch = part.match(/Content-ID:\s*<response-item\d+:\s*(\d+)>/);
-    // 2) JSON 본문 추출
-    const jsonMatch = part.match(/\{[\s\S]*\}/);
-    if (!idMatch || !jsonMatch) continue;
-    const key = idMatch[1] as string; // 숫자 문자열 (캡처 그룹 결과: string 보장)
-    const value = JSON.parse(jsonMatch[0]) as ParsedBatchResponse;
-    parsedData.set(key, value);
-  }
-
-  return parsedData;
-};
