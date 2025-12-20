@@ -31,7 +31,7 @@ export const createBatchGoogleCalendarEvent = async (
 ): Promise<ParsedGoogleCalendar> => {
   const batchRequestUrl = 'https://www.googleapis.com/batch/calendar/v3';
   const boundary = 'batch_boundary';
-  const responseFieldsQuery = 'fields=kind,id,status,htmlLink'; // 응답 데이터 필드 선택 (전체를 받지 않음)
+  const responseFieldsQuery = 'fields=kind,id,status,htmlLink,extendedProperties/shared'; // 응답 데이터 필드 선택 (전체를 받지 않음)
   const { token: accessToken } = await authClient.getAccessToken(); // 배치는 accessToken을 요구한다.
 
   let body = '';
@@ -41,6 +41,50 @@ export const createBatchGoogleCalendarEvent = async (
     body += `Content-Type: application/http\r\n`;
     body += `Content-ID: <item${idx + 1}: ${event.eventNumber}>\r\n\r\n`;
     body += `POST /calendar/v3/calendars/${encodeURIComponent(ENV.GOOGLE_CALENDAR_ID)}/events?${responseFieldsQuery}\r\n`;
+    body += `Content-Type: application/json; charset=UTF-8\r\n\r\n`;
+    body += JSON.stringify(createEventRequestTemplate(event)) + '\r\n';
+  });
+  body += `--${boundary}--`;
+
+  // Batch 요청
+  const res = await axios.post(batchRequestUrl, body, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': `multipart/mixed; boundary=${boundary}`,
+      'Accept-Encoding': 'gzip', // 응답 용량 축소 (네트워크 비용 절감, 대량의 텍스트로 오므로)
+    },
+    responseType: 'text',
+    transformResponse: (x) => x, // JSON 자동 파싱 방지
+  });
+
+  const responseText = res.data;
+
+  // 파싱: 구글 배치 응답 TEXT에 대한 파싱 (content-id, httpStatus, resBody 확보)
+  const batchGoogleResponse = parseBatchGoogleResponse(responseText);
+  // 파싱: 배치 응답의 Body에 대한 캐시 캘린더 형식으로의 파싱
+  const parsedGoogleCalendar = parseGoogleCalendar(batchGoogleResponse);
+
+  return parsedGoogleCalendar;
+};
+
+export const updateBatchGoogleCalendarEvent = async (
+  events: WingsSchedulesValues[],
+  cacheCalendar: ParsedGoogleCalendar,
+): Promise<ParsedGoogleCalendar> => {
+  const batchRequestUrl = 'https://www.googleapis.com/batch/calendar/v3';
+  const boundary = 'batch_boundary';
+  const responseFieldsQuery = 'sendUpdates=all&fields=kind,id,status,htmlLink,extendedProperties/shared'; // 응답 데이터 필드 선택 (전체를 받지 않음)
+  const { token: accessToken } = await authClient.getAccessToken(); // 배치는 accessToken을 요구한다.
+
+  let body = '';
+
+  events.forEach((event, idx) => {
+    const calendar = cacheCalendar.get(event.eventNumber);
+
+    body += `--${boundary}\r\n`;
+    body += `Content-Type: application/http\r\n`;
+    body += `Content-ID: <item${idx + 1}: ${event.eventNumber}>\r\n\r\n`;
+    body += `PUT /calendar/v3/calendars/${encodeURIComponent(ENV.GOOGLE_CALENDAR_ID)}/events/${calendar?.id}?${responseFieldsQuery}\r\n`;
     body += `Content-Type: application/json; charset=UTF-8\r\n\r\n`;
     body += JSON.stringify(createEventRequestTemplate(event)) + '\r\n';
   });

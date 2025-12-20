@@ -1,21 +1,24 @@
 import { ParsedWingsSchedules, WingsSchedulesValues } from '../types/schedules.type';
 
-export const updateNewWingsSchedules = (
-  newEventNumbers: Set<string>,
+// Map의 경우 key가 없으면 신규 등록, 있으면 덮어쓴다.
+export const updateWingsSchedules = (
+  eventNumbers: Set<string>,
   currSchedules: ParsedWingsSchedules,
   cacheSchedules: ParsedWingsSchedules,
 ) => {
-  newEventNumbers.forEach((eNumber: string) => {
-    const newSchedule = currSchedules.get(eNumber);
-    if (newSchedule) {
-      cacheSchedules.set(eNumber, newSchedule);
+  const updatedSchedules: WingsSchedulesValues[] = [];
+  eventNumbers.forEach((eNumber: string) => {
+    const schedule = currSchedules.get(eNumber);
+    if (schedule) {
+      cacheSchedules.set(eNumber, schedule);
+      updatedSchedules.push(schedule);
     }
   });
   // ! DEBUG
-  console.log(`총 ${newEventNumbers.size}개의 신규 스케줄을 업데이트했습니다.`);
-};
+  console.log(`총 ${updatedSchedules.length}개의 스케줄을 업데이트했습니다.`);
 
-export const updateChangedWginsSchedules = () => {};
+  return updatedSchedules;
+};;
 
 /**
  * 최신 스크랩 데이터와 캐시 데이터를 비교한다.

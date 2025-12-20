@@ -1,6 +1,6 @@
-import { ParsedBatchResponse, ParsedGoogleCalendar } from '../types/calendar.type';
+import { ParsedGoogleCalendar } from '../types/calendar.type';
 
-// 구글 캘린더 배치 이벤트 등록 요청 후 응답 데이터(TEXT)에 대한 파싱
+// 구글 캘린더 배치 이벤트 요청 후 응답 데이터(TEXT)에 대한 파싱
 export const parseBatchGoogleResponse = (raw: string) => {
   const parsedData: Map<string, BatchGoogleResponse> = new Map();
 

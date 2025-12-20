@@ -3,6 +3,9 @@ export type ParsedBatchResponse = {
   id?: string;
   status?: string;
   htmlLink?: string;
+  extendedProperties?: {
+    shared: Record<string, number | string | number[] | string[]>;
+  };
   [k: string]: any;
 };
 

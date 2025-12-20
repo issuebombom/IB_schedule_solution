@@ -4,10 +4,11 @@ import { wingsLogin } from '../modules/scraper/login';
 import { getWingsScheduleDetails, getWingsSchedules } from '../modules/scraper/getSchedule';
 import { requestRetry } from '../modules/utils/requestRetry';
 import { loadCacheCalendar, loadCacheSchedules, saveCache } from '../modules/utils/cache';
-import { deleteBatchGoogleCalendarEvent } from '../modules/apis/google/calendar';
-import { compareWingsSchedules, updateNewWingsSchedules } from '../modules/sync/updateSchedule';
-import { WingsSchedulesValues } from '../modules/types/schedules.type';
-import { updateNewCalendarEvents } from '../modules/sync/updateCalendar';
+import { compareWingsSchedules, updateWingsSchedules } from '../modules/sync/updateSchedule';
+import {
+  updateChangedCalendarEvents,
+  updateNewCalendarEvents,
+} from '../modules/sync/updateCalendar';
 import { initCacheCalendar } from '../modules/sync/initializeCache';
 
 // 스크랩 실행 함수
@@ -30,13 +31,13 @@ export const scrapeOrchestrator = async (startDate: string, endDate: string) => 
     if (schedule) schedule.details = obj.details;
   }
   // ! 5. 기존 데이터(캐시) 불러오기
-  const [cacheSchedules, cacheCalender] = await Promise.all([
+  const [cacheSchedules, cacheCalendar] = await Promise.all([
     loadCacheSchedules(),
     loadCacheCalendar(),
   ]);
 
   // ! 5-a. 캐시 없을 경우 초기화 작업 (스케줄 캐시 신규 저장, 캘린더 업데이트, 캘린더 캐시 신규 저장)
-  if (cacheSchedules === 'No Cache' || cacheCalender === 'No Cache') {
+  if (cacheSchedules === 'No Cache' || cacheCalendar === 'No Cache') {
     // NOTE: 구글 캘린더 등록 (기존 캘린더는 비워져 있어야 중복되지 않음 주의)
     const updatedCalendars = await initCacheCalendar(currSchedules);
     // 스케줄 캐시데이터 등록
@@ -51,61 +52,53 @@ export const scrapeOrchestrator = async (startDate: string, endDate: string) => 
   const compareResult = compareWingsSchedules(currSchedules, cacheSchedules);
   const { newEventNumbers, diffEventNumbers, diffEventFieldValue } = compareResult;
 
-  // ! 6. 신규 데이터 업데이트
-  if (newEventNumbers.size > 0) {
-    // 캐시 스케줄 업데이트
-    updateNewWingsSchedules(newEventNumbers, currSchedules, cacheSchedules);
+  // ! 6. 신규 및 수정 데이터 업데이트
+  if (newEventNumbers.size + diffEventNumbers.size > 0) {
+    // 캐시 스케줄에 일괄 업데이트
+    const eventNumbersUnion = new Set([...newEventNumbers, ...diffEventNumbers]);
+    updateWingsSchedules(eventNumbersUnion, currSchedules, cacheSchedules);
 
-    // 구글 캘린더 및 캐시 캘린더 업데이트
-    // NOTE: 구글 캘린더 업데이트 후 응답 데이터를 캐시로 저장해야 하므로 기다려야 함
-    await updateNewCalendarEvents(newEventNumbers, currSchedules, cacheCalender);
+    // ! 6-a. 신규 데이터 캘린더 업데이트
+    if (newEventNumbers.size > 0) {
+      // 구글 캘린더 및 캐시 캘린더 업데이트
+      // NOTE: 구글 캘린더 업데이트 후 응답 데이터를 캐시로 저장해야 하므로 기다려야 함
+      const updatedNewCalendars = await updateNewCalendarEvents(
+        newEventNumbers,
+        currSchedules,
+        cacheCalendar,
+      );
 
-    // ! DEBUG
-    console.log(`총 ${newEventNumbers.size}개의 신규 스케줄을 업데이트했습니다.`);
-  }
-
-  // ! 7. 변경 데이터 업데이트
-  if (diffEventNumbers.size > 0) {
-    const diffSchedules: WingsSchedulesValues[] = [];
-    const canceledSchedules: WingsSchedulesValues[] = [];
-    // NOTE: 내용 변경과 삭제 대상을 분리
-    for (const eNumber of diffEventNumbers) {
-      const diffSchedule = currSchedules.get(eNumber);
-      if (diffSchedule) {
-        cacheSchedules.set(eNumber, diffSchedule); // 변경 내용으로 덮어쓰기
-        if (diffSchedule.status === 'CXL') {
-          // 행사 취소로 변경된 경우 캘린더 삭제 대상으로 등록
-          canceledSchedules.push(diffSchedule);
-          continue;
-        }
-        // 캘린더 변경 대상으로 등록
-        diffSchedules.push(diffSchedule);
+      // 생성 목록 보여주기 (추후 로깅으로 변경)
+      for (const [key, value] of updatedNewCalendars) {
+        console.log(`${key}: `, value.extendedProperties?.shared);
       }
     }
-    // ! 7-a. 취소 일정은 구글캘린더에서 삭제
-    if (canceledSchedules.length > 0) {
-      const eventIds: Map<string, string> = new Map();
-      for (const schedule of canceledSchedules) {
-        // 캘린더 이벤트 ID 확보
-        const calendar = cacheCalender.get(schedule.eventNumber);
-        if (calendar && typeof calendar.id === 'string') {
-          // [스케줄 ID : 캘린더 이벤트 ID] 형태로 수집
-          eventIds.set(schedule.eventNumber, calendar.id);
-          // 캐시 캘린더에서 삭제
-          cacheCalender.delete(schedule.eventNumber);
-        }
+
+    // ! 6-b. 변경 데이터 캘린더 업데이트
+    if (diffEventNumbers.size > 0) {
+      /** 구글 캘린더 및 캐시 캘린더 업데이트
+       * 구글 캘린더 업데이트 후 응답 데이터를 캐시로 저장해야 하므로 기다려야 함
+       * 취소된 스케줄은 캘린더 및 캐시 캘린더에서 완전 삭제
+       * */
+      const updatedChangedCalendars = await updateChangedCalendarEvents(
+        diffEventNumbers,
+        currSchedules,
+        cacheCalendar,
+      );
+
+      // 수정 목록 보여주기 (추후 로깅으로 변경)
+      for (const [key, value] of updatedChangedCalendars) {
+        console.log(`${key}: `, value.extendedProperties?.shared);
       }
-      // 구글 캘린더에서 이벤트 삭제
-      deleteBatchGoogleCalendarEvent(eventIds);
-      // ! DEBUG
-      console.log(`총 ${eventIds.size}개의 일정을 취소(삭제)했습니다.`);
     }
-    // TODO: 캘린더 Batch PUT하기
   }
+
+  // 세부 변경 사항 확인
+  console.log(diffEventFieldValue);
 
   // 업데이트 후 최종 저장
   saveCache(cacheSchedules, ENV.SCHEDULE_FILE_JSON);
-  saveCache(cacheCalender, ENV.CALENDAR_FILE_JSON);
+  saveCache(cacheCalendar, ENV.CALENDAR_FILE_JSON);
 
   return;
 };
