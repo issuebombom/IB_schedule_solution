@@ -73,7 +73,8 @@ export const updateBatchGoogleCalendarEvent = async (
 ): Promise<ParsedGoogleCalendar> => {
   const batchRequestUrl = 'https://www.googleapis.com/batch/calendar/v3';
   const boundary = 'batch_boundary';
-  const responseFieldsQuery = 'sendUpdates=all&fields=kind,id,status,htmlLink,extendedProperties/shared'; // 응답 데이터 필드 선택 (전체를 받지 않음)
+  const responseFieldsQuery =
+    'sendUpdates=all&fields=kind,id,status,htmlLink,extendedProperties/shared'; // 응답 데이터 필드 선택 (전체를 받지 않음)
   const { token: accessToken } = await authClient.getAccessToken(); // 배치는 accessToken을 요구한다.
 
   let body = '';
@@ -181,6 +182,9 @@ const createEventRequestTemplate = (s: WingsSchedulesValues) => {
     // UI에서 노출되지 않는 데이터
     extendedProperties: {
       shared: {
+        eventName: s.eventName,
+        startTime: s.startTime,
+        endTime: s.endTime,
         manager: s.manager,
         place: s.place,
         type: s.type,
