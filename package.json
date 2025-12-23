@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@google-cloud/local-auth": "2.1.0",
+    "@upstash/redis": "^1.35.8",
     "axios": "^1.13.2",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",

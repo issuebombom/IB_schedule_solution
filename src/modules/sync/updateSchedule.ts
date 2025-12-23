@@ -4,21 +4,19 @@ import { ParsedWingsSchedules, WingsSchedulesValues } from '../types/schedules.t
 export const updateWingsSchedules = (
   eventNumbers: Set<string>,
   currSchedules: ParsedWingsSchedules,
-  cacheSchedules: ParsedWingsSchedules,
 ) => {
-  const updatedSchedules: WingsSchedulesValues[] = [];
+  const updatedSchedules: ParsedWingsSchedules = new Map();
   eventNumbers.forEach((eNumber: string) => {
     const schedule = currSchedules.get(eNumber);
     if (schedule) {
-      cacheSchedules.set(eNumber, schedule);
-      updatedSchedules.push(schedule);
+      updatedSchedules.set(eNumber, schedule);
     }
   });
   // ! DEBUG
-  console.log(`총 ${updatedSchedules.length}개의 스케줄을 업데이트했습니다.`);
+  console.log(`총 ${updatedSchedules.size}개의 스케줄을 업데이트했습니다.`);
 
   return updatedSchedules;
-};;
+};
 
 /**
  * 최신 스크랩 데이터와 캐시 데이터를 비교한다.
