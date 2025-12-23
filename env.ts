@@ -16,6 +16,9 @@ const envSchema = z.object({
   CACHE_DIR: z.string().min(1),
   SCHEDULE_FILE_JSON: z.string().min(1),
   CALENDAR_FILE_JSON: z.string().min(1),
+
+  UPSTASH_REDIS_REST_URL: z.string().min(1),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(1),
 });
 
 // 2. process.env 검증 및 결과 객체 생성
