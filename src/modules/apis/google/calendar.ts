@@ -5,6 +5,7 @@ import { WingsSchedulesValues } from '../../types/schedules.type';
 import axios from 'axios';
 import { parseBatchGoogleResponse, parseGoogleCalendar } from '../../parser/parseCalendar';
 import { ParsedGoogleCalendar } from '../../types/calendar.type';
+import { FatalError } from '../../utils/appError';
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
@@ -71,11 +72,23 @@ export const updateBatchGoogleCalendarEvent = async (
   events: WingsSchedulesValues[],
   cacheCalendar: ParsedGoogleCalendar,
 ): Promise<ParsedGoogleCalendar> => {
+  const batchLimit = 1000;
   const batchRequestUrl = 'https://www.googleapis.com/batch/calendar/v3';
   const boundary = 'batch_boundary';
   const responseFieldsQuery =
     'sendUpdates=all&fields=kind,id,status,htmlLink,extendedProperties/shared'; // 응답 데이터 필드 선택 (전체를 받지 않음)
   const { token: accessToken } = await authClient.getAccessToken(); // 배치는 accessToken을 요구한다.
+
+  // ! 1000개 이상 Batch를 올릴 수 없다.
+  if (events.length > batchLimit) {
+    throw new FatalError(
+      'EXCEED_BATCH_LIMIT',
+      `구글 캘린더 배치 한도수를 초과했습니다. ${events.length}/${batchLimit}`,
+      {
+        count: events.length,
+      },
+    );
+  }
 
   let body = '';
 

@@ -8,8 +8,6 @@ export const initCacheCalendar = async (currSchedules: ParsedWingsSchedules) => 
     if (value.status === 'CXL') continue; // CXL 처리된 데이터는 필터링 필요
     filteredSchedules.push(value);
   }
-  // ! 1000개 이상 Batch를 올릴 수 없다.
-  if (filteredSchedules.length >= 1000) throw new Error('구글 캘린더 배치 한도수를 초과했습니다.');
   const updatedCalendars = await createBatchGoogleCalendarEvent(filteredSchedules);
 
   return updatedCalendars;
