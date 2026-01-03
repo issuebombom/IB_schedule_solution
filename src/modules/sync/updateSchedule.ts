@@ -1,4 +1,5 @@
 import { ParsedWingsSchedules, WingsSchedulesValues } from '../types/schedules.type';
+import { log, LogLevel } from '../utils/logger';
 
 // Map의 경우 key가 없으면 신규 등록, 있으면 덮어쓴다.
 export const updateWingsSchedules = (
@@ -12,8 +13,11 @@ export const updateWingsSchedules = (
       updatedSchedules.set(eNumber, schedule);
     }
   });
-  // ! DEBUG
-  console.log(`총 ${updatedSchedules.size}개의 스케줄을 업데이트했습니다.`);
+  // ! LOG
+  log(LogLevel.INFO, {
+    step: 'UPDATE_SCHEDULE',
+    message: `총 ${updatedSchedules.size}개의 스케줄을 업데이트했습니다.`,
+  });
 
   return updatedSchedules;
 };

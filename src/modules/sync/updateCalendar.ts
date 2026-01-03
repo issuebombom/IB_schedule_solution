@@ -5,6 +5,7 @@ import {
 } from '../apis/google/calendar';
 import { ParsedGoogleCalendar } from '../types/calendar.type';
 import { ParsedWingsSchedules, WingsSchedulesValues } from '../types/schedules.type';
+import { log, LogLevel } from '../utils/logger';
 
 export const updateNewCalendarEvents = async (
   newEventNumbers: Set<string>,
@@ -22,8 +23,11 @@ export const updateNewCalendarEvents = async (
   // 구글 캘린더 배치 업데이트 및 캐시 캘린더 업데이트
   const updatedCalendars = await createBatchGoogleCalendarEvent(targetSchedules);
 
-  // ! DEBUG
-  console.log(`총 ${updatedCalendars.size}개의 캘린더 이벤트를 업데이트했습니다.`);
+  // ! LOG
+  log(LogLevel.INFO, {
+    step: 'UPDATE_CALENDAR',
+    message: `총 ${updatedCalendars.size}개의 캘린더 이벤트를 업데이트했습니다.`,
+  });
 
   return updatedCalendars;
 };
@@ -62,15 +66,21 @@ export const updateChangedCalendarEvents = async (
     // 구글 캘린더에서 이벤트 삭제 (응답 바디 없음)
     await deleteBatchGoogleCalendarEvent(eventIds);
 
-    // ! DEBUG
-    console.log(`총 ${eventIds.size}개의 캘린더 이벤트를 삭제했습니다.`);
+    // ! LOG
+    log(LogLevel.INFO, {
+      step: 'DELETE_CALENDAR',
+      message: `총 ${eventIds.size}개의 캘린더 이벤트를 삭제했습니다.`,
+    });
   }
 
   // 내용 변경된 캘린더 정보 업데이트
   const updatedCalendars = await updateBatchGoogleCalendarEvent(changedSchedules, cacheCalendar);
 
-  // ! DEBUG
-  console.log(`총 ${updatedCalendars.size}개의 캘린더 이벤트를 수정했습니다.`);
+  // ! LOG
+  log(LogLevel.INFO, {
+    step: 'UPDATE_CALENDAR',
+    message: `총 ${updatedCalendars.size}개의 캘린더 이벤트를 수정했습니다.`,
+  });
 
   return { updatedCalendars, deletedCalendars };
 };
