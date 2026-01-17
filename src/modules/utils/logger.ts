@@ -19,11 +19,8 @@ export const log = (level: LogLevel, payload: LogPayload) => {
     message: payload.message,
   };
 
-  if (level === LogLevel.INFO) {
-    console.info(base.message);
-  } else if (level === LogLevel.ERROR) {
-    console.error({ ...base, ...payload });
-  } else {
-    console.log({ ...base, ...payload });
-  }
+  if (level === LogLevel.INFO) console.info(`[${base.step}] ${base.message}`);
+  else if (level === LogLevel.ERROR) console.error({ ...base, ...payload });
+  else if (level === LogLevel.WARN) console.warn({ ...base, ...payload });
+  else console.log({ ...base, ...payload });
 };

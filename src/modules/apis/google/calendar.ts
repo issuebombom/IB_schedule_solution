@@ -12,7 +12,7 @@ const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 // 인증
 const authClient = new JWT({
   email: ENV.GOOGLE_CLIENT_EMAIL,
-  key: ENV.GOOGLE_PRIVATE_KEY,
+  key: ENV.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
   scopes: SCOPES,
 });
 
@@ -217,7 +217,7 @@ const descriptionTemplate = (s: WingsSchedulesValues) => {
   const template = {
     담당자: s.manager,
     예약상태: s.status,
-    행사타입: s.place,
+    행사타입: s.type,
     행사번호: s.eventNumber,
     참조사항: '\n' + s.details.join('\n'),
   };

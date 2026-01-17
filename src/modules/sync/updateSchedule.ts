@@ -15,7 +15,7 @@ export const updateWingsSchedules = (
   });
   // ! LOG
   log(LogLevel.INFO, {
-    step: 'UPDATE_SCHEDULE',
+    step: 'UPDATE_SCHEDULES',
     message: `총 ${updatedSchedules.size}개의 스케줄을 업데이트했습니다.`,
   });
 
@@ -59,6 +59,7 @@ export const compareWingsSchedules = (
         // { 이벤트 넘버, 이벤트명, 필드, 기존값, 변동값 }
         diffEventFieldValue.push({
           eventNum: currKey,
+          eventName: currValue.eventName,
           eventField: field,
           prevValue: prevValue[fieldKey],
           currVaule: currValue[fieldKey],
@@ -69,6 +70,12 @@ export const compareWingsSchedules = (
       }
     }
   }
+
+  // ! LOG
+  log(LogLevel.INFO, {
+    step: 'CHANGES_DETECTED',
+    message: `발견된 신규 스케줄: ${newEventNumbers.size} | 발견된 변동 스케줄: ${diffEventNumbers.size}`,
+  });
 
   return { newEventNumbers, diffEventNumbers, diffEventFieldValue };
 };

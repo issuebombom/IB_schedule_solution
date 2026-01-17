@@ -63,14 +63,16 @@ export const updateChangedCalendarEvents = async (
         deletedCalendars.set(schedule.eventNumber, calendar);
       }
     }
-    // 구글 캘린더에서 이벤트 삭제 (응답 바디 없음)
-    await deleteBatchGoogleCalendarEvent(eventIds);
+    // 구글 캘린더에서 취소된 이벤트는 삭제 (응답 바디 없음)
+    if (eventIds.size > 0) {
+      await deleteBatchGoogleCalendarEvent(eventIds);
 
-    // ! LOG
-    log(LogLevel.INFO, {
-      step: 'DELETE_CALENDAR',
-      message: `총 ${eventIds.size}개의 캘린더 이벤트를 삭제했습니다.`,
-    });
+      // ! LOG
+      log(LogLevel.INFO, {
+        step: 'DELETE_CALENDAR',
+        message: `총 ${eventIds.size}개의 캘린더 이벤트를 삭제했습니다.`,
+      });
+    }
   }
 
   // 내용 변경된 캘린더 정보 업데이트

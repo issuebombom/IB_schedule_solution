@@ -112,10 +112,13 @@ export const getWingsScheduleDetails = async (input: GetWingsScheduleDetails) =>
     });
   }
 
+  // 참조사항 실 수집 수
+  const count = successfulData.filter((data) => data.details.length > 0).length;
+
   // ! LOG
   log(LogLevel.INFO, {
     step,
-    message: `${successfulData.filter((data) => data.details.length > 0).length}개의 유효한 스케줄 참조사항 스크랩 성공`,
+    message: `${count}개의 유효한 스케줄 참조사항 스크랩 성공`,
   });
 
   return successfulData;

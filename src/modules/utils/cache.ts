@@ -1,5 +1,3 @@
-import fs from 'fs/promises';
-import path from 'path';
 import { ENV } from '../../../env';
 import { ParsedWingsSchedules, WingsSchedulesValues } from '../types/schedules.type';
 import { ParsedBatchResponse, ParsedGoogleCalendar } from '../types/calendar.type';
@@ -17,56 +15,15 @@ export enum RedisNamespace {
   GOOGLE_CALENDAR_EVENTS = 'google-calendar-events',
 }
 
-// Map 데이터 -> JSON파일 (로컬 저장)
-export const saveCache = async (
-  cacheMap: ParsedWingsSchedules | ParsedGoogleCalendar,
-  fileName: string,
-) => {
-  const CACHE_PATH = path.join(ENV.CACHE_DIR, fileName);
-  const obj = Object.fromEntries(cacheMap);
-  await fs.writeFile(CACHE_PATH, JSON.stringify(obj));
-};
-
-// JSON파일 -> Map (로컬 읽기)
-export const loadCacheSchedules = async (): Promise<ParsedWingsSchedules | 'No Cache'> => {
-  try {
-    const CACHE_PATH = path.join(ENV.CACHE_DIR, ENV.SCHEDULE_FILE_JSON);
-    const loadFile = await fs.readFile(CACHE_PATH, 'utf-8');
-    return new Map(Object.entries(JSON.parse(loadFile)));
-  } catch (err) {
-    const e = err as NodeJS.ErrnoException;
-    if (e.code === 'ENOENT') {
-      return 'No Cache';
-    }
-    throw err;
-  }
-};
-
-// JSON파일 -> Map (로컬 읽기)
-export const loadCacheCalendar = async (): Promise<ParsedGoogleCalendar | 'No Cache'> => {
-  try {
-    const CACHE_PATH = path.join(ENV.CACHE_DIR, ENV.CALENDAR_FILE_JSON);
-    const loadFile = await fs.readFile(CACHE_PATH, 'utf-8');
-    return new Map(Object.entries(JSON.parse(loadFile)));
-  } catch (err) {
-    const e = err as NodeJS.ErrnoException;
-    if (e.code === 'ENOENT') {
-      return 'No Cache';
-    }
-    throw err;
-  }
-};
-
 // Map -> Redis (namespace: { eNumber: values })
 // upstash를 사용해서 stringify 생략
 export const saveCacheToRedis = async (
   cacheMap: ParsedWingsSchedules | ParsedGoogleCalendar,
   namespace: RedisNamespace,
 ) => {
-  const payload: Record<string, WingsSchedulesValues | ParsedBatchResponse> = {};
-  for (const [key, value] of cacheMap) {
-    payload[key] = value;
-  }
+  const payload: Record<string, WingsSchedulesValues | ParsedBatchResponse> =
+    Object.fromEntries(cacheMap);
+
   try {
     await redis.hset(namespace, payload);
 
@@ -90,10 +47,7 @@ export const loadCacheSchedulesFromRedis = async (
   cacheMap: ParsedWingsSchedules,
   namespace: RedisNamespace,
 ): Promise<ParsedWingsSchedules | 'No Cache'> => {
-  const keys: string[] = [];
-  for (const [key, _] of cacheMap) {
-    keys.push(key);
-  }
+  const keys: string[] = [...cacheMap.keys()];
   try {
     const cacheData: Record<string, WingsSchedulesValues> | null = await redis.hmget(
       `${namespace}`,
@@ -116,7 +70,7 @@ export const loadCacheSchedulesFromRedis = async (
   } catch (err) {
     throw new FatalError(
       'REDIS_LOAD_SCHEDULE_FAILED',
-      '메모리에서 스케줄 데이터를 가져오는데 실패했습니다.',
+      '캐시에서 스케줄 데이터를 가져오는데 실패했습니다.',
       { namespace },
       err,
     );
@@ -129,10 +83,7 @@ export const loadCacheCalendarFromRedis = async (
   cacheMap: ParsedGoogleCalendar,
   namespace: RedisNamespace,
 ): Promise<ParsedGoogleCalendar | 'No Cache'> => {
-  const keys: string[] = [];
-  for (const [key, _] of cacheMap) {
-    keys.push(key);
-  }
+  const keys: string[] = [...cacheMap.keys()];
   try {
     const cacheData: Record<string, ParsedBatchResponse> | null = await redis.hmget(
       `${namespace}`,
@@ -155,7 +106,7 @@ export const loadCacheCalendarFromRedis = async (
   } catch (err) {
     throw new FatalError(
       'REDIS_LOAD_CALENDAR_FAILED',
-      '메모리에서 캘린더 데이터를 가져오는데 실패했습니다.',
+      '캐시에서 캘린더 데이터를 가져오는데 실패했습니다.',
       { namespace },
       err,
     );
@@ -166,9 +117,9 @@ export const deleteCacheCalendarFromRedis = async (
   cacheMap: ParsedGoogleCalendar,
   namespace: RedisNamespace,
 ) => {
-  const keys = Array.from(cacheMap.keys());
+  const keys: string[] = [...cacheMap.keys()];
   try {
-    redis.hdel(namespace, ...keys);
+    await redis.hdel(namespace, ...keys);
 
     log(LogLevel.INFO, {
       step: 'REDIS_DELETE_CALENDAR_SUCCESS',
@@ -177,7 +128,7 @@ export const deleteCacheCalendarFromRedis = async (
   } catch (err) {
     throw new FatalError(
       'REDIS_DELETE_CALENDAR_FAILED',
-      '메모리에서 캘린더 데이터를 삭제하는데 실패했습니다.',
+      '캐시에서 캘린더 데이터를 삭제하는데 실패했습니다.',
       { namespace, keys },
       err,
     );
