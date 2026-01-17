@@ -1,24 +1,26 @@
 import { ParsedWingsSchedules, WingsSchedulesValues } from '../types/schedules.type';
+import { log, LogLevel } from '../utils/logger';
 
 // Map의 경우 key가 없으면 신규 등록, 있으면 덮어쓴다.
 export const updateWingsSchedules = (
   eventNumbers: Set<string>,
   currSchedules: ParsedWingsSchedules,
-  cacheSchedules: ParsedWingsSchedules,
 ) => {
-  const updatedSchedules: WingsSchedulesValues[] = [];
+  const updatedSchedules: ParsedWingsSchedules = new Map();
   eventNumbers.forEach((eNumber: string) => {
     const schedule = currSchedules.get(eNumber);
     if (schedule) {
-      cacheSchedules.set(eNumber, schedule);
-      updatedSchedules.push(schedule);
+      updatedSchedules.set(eNumber, schedule);
     }
   });
-  // ! DEBUG
-  console.log(`총 ${updatedSchedules.length}개의 스케줄을 업데이트했습니다.`);
+  // ! LOG
+  log(LogLevel.INFO, {
+    step: 'UPDATE_SCHEDULES',
+    message: `총 ${updatedSchedules.size}개의 스케줄을 업데이트했습니다.`,
+  });
 
   return updatedSchedules;
-};;
+};
 
 /**
  * 최신 스크랩 데이터와 캐시 데이터를 비교한다.
@@ -57,6 +59,7 @@ export const compareWingsSchedules = (
         // { 이벤트 넘버, 이벤트명, 필드, 기존값, 변동값 }
         diffEventFieldValue.push({
           eventNum: currKey,
+          eventName: currValue.eventName,
           eventField: field,
           prevValue: prevValue[fieldKey],
           currVaule: currValue[fieldKey],
@@ -67,6 +70,12 @@ export const compareWingsSchedules = (
       }
     }
   }
+
+  // ! LOG
+  log(LogLevel.INFO, {
+    step: 'CHANGES_DETECTED',
+    message: `발견된 신규 스케줄: ${newEventNumbers.size} | 발견된 변동 스케줄: ${diffEventNumbers.size}`,
+  });
 
   return { newEventNumbers, diffEventNumbers, diffEventFieldValue };
 };

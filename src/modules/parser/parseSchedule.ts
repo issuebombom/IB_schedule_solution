@@ -6,7 +6,6 @@ import {
   WingsSchedules,
   wingsSchedulesSchema,
 } from '../types/schedules.type';
-import { ParsedBatchResponse, ParsedGoogleCalendar } from '../types/calendar.type';
 
 export const parseWingsSchedule = (input: WingsSchedules): ParsedWingsSchedules => {
   // validation

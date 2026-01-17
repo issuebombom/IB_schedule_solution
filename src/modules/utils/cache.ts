@@ -1,44 +1,136 @@
-import fs from 'fs/promises';
-import path from 'path';
 import { ENV } from '../../../env';
-import { ParsedWingsSchedules } from '../types/schedules.type';
-import { ParsedGoogleCalendar } from '../types/calendar.type';
+import { ParsedWingsSchedules, WingsSchedulesValues } from '../types/schedules.type';
+import { ParsedBatchResponse, ParsedGoogleCalendar } from '../types/calendar.type';
 
-// Map 데이터 -> JSON
-export const saveCache = async (
+import { Redis } from '@upstash/redis';
+import { FatalError } from './appError';
+import { log, LogLevel } from './logger';
+const redis = new Redis({
+  url: ENV.UPSTASH_REDIS_REST_URL,
+  token: ENV.UPSTASH_REDIS_REST_TOKEN,
+});
+
+export enum RedisNamespace {
+  WINGS_SCHEDULES = 'wings-schedules',
+  GOOGLE_CALENDAR_EVENTS = 'google-calendar-events',
+}
+
+// Map -> Redis (namespace: { eNumber: values })
+// upstash를 사용해서 stringify 생략
+export const saveCacheToRedis = async (
   cacheMap: ParsedWingsSchedules | ParsedGoogleCalendar,
-  fileName: string,
+  namespace: RedisNamespace,
 ) => {
-  const CACHE_PATH = path.join(ENV.CACHE_DIR, fileName);
-  const obj = Object.fromEntries(cacheMap);
-  await fs.writeFile(CACHE_PATH, JSON.stringify(obj));
-};
+  const payload: Record<string, WingsSchedulesValues | ParsedBatchResponse> =
+    Object.fromEntries(cacheMap);
 
-// JSON -> Map
-export const loadCacheSchedules = async (): Promise<ParsedWingsSchedules | 'No Cache'> => {
   try {
-    const CACHE_PATH = path.join(ENV.CACHE_DIR, ENV.SCHEDULE_FILE_JSON);
-    const loadFile = await fs.readFile(CACHE_PATH, 'utf-8');
-    return new Map(Object.entries(JSON.parse(loadFile)));
+    await redis.hset(namespace, payload);
+
+    log(LogLevel.INFO, {
+      step: 'REDIS_SAVE_DATA_SUCCESS',
+      message: `캐시 저장 성공 | namespace: ${namespace} | count: ${cacheMap.size}`,
+    });
   } catch (err) {
-    const e = err as NodeJS.ErrnoException;
-    if (e.code === 'ENOENT') {
-      return 'No Cache';
-    }
-    throw err;
+    throw new FatalError(
+      'REDIS_SAVE_DATA_FAILED',
+      `${namespace}를 저장하는데 실패했습니다.`,
+      { namespace },
+      err,
+    );
   }
 };
 
-export const loadCacheCalendar = async (): Promise<ParsedGoogleCalendar | 'No Cache'> => {
+// Redis ( { eNumber: values } ) -> Map
+// upstash를 사용해서 parse 생략
+export const loadCacheSchedulesFromRedis = async (
+  cacheMap: ParsedWingsSchedules,
+  namespace: RedisNamespace,
+): Promise<ParsedWingsSchedules | 'No Cache'> => {
+  const keys: string[] = [...cacheMap.keys()];
   try {
-    const CACHE_PATH = path.join(ENV.CACHE_DIR, ENV.CALENDAR_FILE_JSON);
-    const loadFile = await fs.readFile(CACHE_PATH, 'utf-8');
-    return new Map(Object.entries(JSON.parse(loadFile)));
-  } catch (err) {
-    const e = err as NodeJS.ErrnoException;
-    if (e.code === 'ENOENT') {
-      return 'No Cache';
+    const cacheData: Record<string, WingsSchedulesValues> | null = await redis.hmget(
+      `${namespace}`,
+      ...keys,
+    );
+    if (!cacheData) return 'No Cache';
+
+    // null 값 제외
+    const cleanCacheData: [string, WingsSchedulesValues][] = [];
+    for (const [key, value] of Object.entries(cacheData)) {
+      if (value) cleanCacheData.push([key, value]);
     }
-    throw err;
+
+    log(LogLevel.INFO, {
+      step: 'REDIS_LOAD_SCHEDULE_SUCCESS',
+      message: `캐시 불러오기 성공 | namespace: ${namespace} | count: ${cleanCacheData.length}`,
+    });
+
+    return new Map(cleanCacheData);
+  } catch (err) {
+    throw new FatalError(
+      'REDIS_LOAD_SCHEDULE_FAILED',
+      '캐시에서 스케줄 데이터를 가져오는데 실패했습니다.',
+      { namespace },
+      err,
+    );
+  }
+};
+
+// Redis ( { eNumber: values } ) -> Map
+// upstash를 사용해서 parse 생략
+export const loadCacheCalendarFromRedis = async (
+  cacheMap: ParsedGoogleCalendar,
+  namespace: RedisNamespace,
+): Promise<ParsedGoogleCalendar | 'No Cache'> => {
+  const keys: string[] = [...cacheMap.keys()];
+  try {
+    const cacheData: Record<string, ParsedBatchResponse> | null = await redis.hmget(
+      `${namespace}`,
+      ...keys,
+    );
+    if (!cacheData) return 'No Cache';
+
+    // null 값 제외
+    const cleanCacheData: [string, ParsedBatchResponse][] = [];
+    for (const [key, value] of Object.entries(cacheData)) {
+      if (value) cleanCacheData.push([key, value]);
+    }
+
+    log(LogLevel.INFO, {
+      step: 'REDIS_LOAD_CALENDAR_SUCCESS',
+      message: `캐시 불러오기 성공 | namespace: ${namespace} | count: ${cleanCacheData.length}`,
+    });
+
+    return new Map(cleanCacheData);
+  } catch (err) {
+    throw new FatalError(
+      'REDIS_LOAD_CALENDAR_FAILED',
+      '캐시에서 캘린더 데이터를 가져오는데 실패했습니다.',
+      { namespace },
+      err,
+    );
+  }
+};
+
+export const deleteCacheCalendarFromRedis = async (
+  cacheMap: ParsedGoogleCalendar,
+  namespace: RedisNamespace,
+) => {
+  const keys: string[] = [...cacheMap.keys()];
+  try {
+    await redis.hdel(namespace, ...keys);
+
+    log(LogLevel.INFO, {
+      step: 'REDIS_DELETE_CALENDAR_SUCCESS',
+      message: `캐시 삭제 성공 | namespace: ${namespace} | count: ${cacheMap.size}`,
+    });
+  } catch (err) {
+    throw new FatalError(
+      'REDIS_DELETE_CALENDAR_FAILED',
+      '캐시에서 캘린더 데이터를 삭제하는데 실패했습니다.',
+      { namespace, keys },
+      err,
+    );
   }
 };

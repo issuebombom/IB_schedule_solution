@@ -1,5 +1,6 @@
 import { createBatchGoogleCalendarEvent } from '../apis/google/calendar';
 import { ParsedWingsSchedules, WingsSchedulesValues } from '../types/schedules.type';
+import { log, LogLevel } from '../utils/logger';
 
 export const initCacheCalendar = async (currSchedules: ParsedWingsSchedules) => {
   // NOTE: 신규 캘린더 등록 (기존 캘린더는 비워져 있어야 중복되지 않음 주의)
@@ -8,9 +9,13 @@ export const initCacheCalendar = async (currSchedules: ParsedWingsSchedules) => 
     if (value.status === 'CXL') continue; // CXL 처리된 데이터는 필터링 필요
     filteredSchedules.push(value);
   }
-  // ! 1000개 이상 Batch를 올릴 수 없다.
-  if (filteredSchedules.length >= 1000) throw new Error('구글 캘린더 배치 한도수를 초과했습니다.');
   const updatedCalendars = await createBatchGoogleCalendarEvent(filteredSchedules);
+
+  // ! LOG
+  log(LogLevel.INFO, {
+    step: 'INIT_CACHE_CREATE',
+    message: `초기 스케줄 캘린더 등록 완료`,
+  });
 
   return updatedCalendars;
 };

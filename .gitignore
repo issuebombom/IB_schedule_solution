@@ -143,3 +143,4 @@ docs
 test.ts
 todolist.md
 tmp/*.json
+lambda_pkg
