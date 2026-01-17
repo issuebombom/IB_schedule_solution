@@ -1,28 +1,32 @@
-import 'dotenv/config';
 import { ENV } from '../../../env';
-import puppeteer, { Browser } from 'puppeteer';
+import puppeteer from 'puppeteer-core';
 import { FatalError } from '../utils/appError';
 import { log, LogLevel } from '../utils/logger';
+import chromium from '@sparticuz/chromium';
+import { Step } from '../utils/report';
 
 export const wingsLogin = async () => {
-  const step = 'WINGS_LOGIN';
-  let browser: Browser | null = null;
+  const step: Step = 'WINGS_LOGIN';
+  let browser;
+  const isLambda = !!process.env.AWS_LAMBDA_FUNCTION_NAME;
 
   try {
     browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-dev-shm-usage',
-        'window-size=1920,1080',
-        '--no-first-run',
-        '--no-default-browser-check',
-      ],
+      args: isLambda ? [...chromium.args, '--window-size=1280,720'] : ['--window-size=1280,720'],
+      executablePath: isLambda
+        ? await chromium.executablePath()
+        : '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      acceptInsecureCerts: true,
+      defaultViewport: { width: 1280, height: 720 },
+      headless: 'shell',
     });
     const page = await browser.newPage();
     await page.goto(ENV.WINGS_MAIN_URL, {
       waitUntil: 'networkidle2',
     });
+
+    // ! LOG
+    log(LogLevel.INFO, { step, message: '사이트 접속 성공' });
 
     // 셀렉터 타겟
     const companyIdSelector = '#company';
@@ -39,12 +43,8 @@ export const wingsLogin = async () => {
     await Promise.all([
       // 엔터
       page.keyboard.press('Enter'),
-      // 내비게이션(DOM 완성 시점까지) 기다림
-      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 5000 }),
-      // 해당 응답을 받을 때까지 기다림
-      page.waitForResponse((res) => res.url().includes('pms/samlsso.do') && res.status() === 200, {
-        timeout: 5000,
-      }),
+      // 네트워크 요청 종료 시점까지 기다림
+      page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 10000 }),
     ]);
 
     // ! LOG
