@@ -6,6 +6,7 @@ import {
   WingsSchedules,
   wingsSchedulesSchema,
 } from '../types/schedules.type';
+import { formatInTimeZone } from 'date-fns-tz';
 
 export const parseWingsSchedule = (input: WingsSchedules): ParsedWingsSchedules => {
   // validation
@@ -18,17 +19,21 @@ export const parseWingsSchedule = (input: WingsSchedules): ParsedWingsSchedules 
       const eventDate = obj.EVENT_DATE;
       const [startHM, endHM] = obj.EVENT_TIME.split('~');
 
-      const startTime = parse(
+      const startDt = parse(
         eventDate + startHM?.replace(':', '') + '00',
         'yyyyMMddHHmmss',
         new Date(),
       ).toISOString(); // toString
 
-      const endTime = parse(
+      const startTime = formatInTimeZone(startDt, 'Asia/Seoul', "yyyy-MM-dd'T'HH:mm:ssXXX");
+
+      const endDt = parse(
         eventDate + endHM?.replace(':', '') + '00',
         'yyyyMMddHHmmss',
         new Date(),
       ).toISOString(); // toString
+
+      const endTime = formatInTimeZone(endDt, 'Asia/Seoul', "yyyy-MM-dd'T'HH:mm:ssXXX");
 
       return [
         obj.EVENT_NO,
