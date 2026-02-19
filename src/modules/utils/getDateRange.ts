@@ -1,3 +1,5 @@
+import { addMonths, format } from 'date-fns';
+
 /**
  * 연월 범위를 지정하면 해당 범위를 배열로 나열
  * @param startDate
@@ -21,6 +23,12 @@ export const getMonthsRange = (startDate: string, endDate: string) => {
     }
   }
   return result;
+};
+
+export const getStartEndDate = (startDate: Date, months: number = 1) => {
+  const startYearMonth = format(startDate, 'yyyyMM');
+  const endYearMonth = format(addMonths(startDate, months), 'yyyyMM');
+  return { startYearMonth, endYearMonth };
 };
 
 function divmod(a: number, b: number): [number, number] {
