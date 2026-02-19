@@ -19,6 +19,7 @@ export class AppError extends Error {
 
 export class RequestTimeoutError extends AppError {}
 export class FatalError extends AppError {}
+export class ValidationError extends Error {}
 
 const genId = (length = 16): string => {
   const p = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
