@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import util from 'node:util';
 import { wingsLogin } from '../modules/scraper/login';
 import { getWingsScheduleDetails, getWingsSchedules } from '../modules/scraper/getSchedule';
 import { requestRetry } from '../modules/utils/requestRetry';
@@ -56,9 +55,10 @@ export const scrapeOrchestrator = async (startDate: string, endDate: string) => 
 
     // ! 5. 기존 데이터(캐시) 불러오기
     const [cacheSchedules, cacheCalendar] = await report.step('LOAD_CACHE_FROM_REDIS', async () => {
+      const keys: string[] = [...currSchedules.keys()]; // key 추출
       return Promise.all([
-        loadCacheSchedulesFromRedis(currSchedules, RedisNamespace.WINGS_SCHEDULES),
-        loadCacheCalendarFromRedis(currSchedules, RedisNamespace.GOOGLE_CALENDAR_EVENTS),
+        loadCacheSchedulesFromRedis(keys, RedisNamespace.WINGS_SCHEDULES),
+        loadCacheCalendarFromRedis(keys, RedisNamespace.GOOGLE_CALENDAR_EVENTS),
       ]);
     });
 
@@ -94,7 +94,7 @@ export const scrapeOrchestrator = async (startDate: string, endDate: string) => 
 
     // ! 5-b. 캐시 데이터와 비교하기
     const compareResult = compareWingsSchedules(currSchedules, cacheSchedules);
-    const { newEventNumbers, diffEventNumbers, diffEventFieldValue } = compareResult;
+    const { newEventNumbers, diffEventNumbers, diffEventFieldValues } = compareResult;
 
     // ! 6. 신규 및 수정 데이터 업데이트
     if (newEventNumbers.size + diffEventNumbers.size > 0) {
@@ -115,21 +115,12 @@ export const scrapeOrchestrator = async (startDate: string, endDate: string) => 
           const updatedNewCalendars = await updateNewCalendarEvents(newEventNumbers, currSchedules);
           await saveCacheToRedis(updatedNewCalendars, RedisNamespace.GOOGLE_CALENDAR_EVENTS);
 
-          // 슬랙 알림 전송
-          const { subject, message } = alert.newEventMessage(
-            newEventNumbers,
-            currSchedules,
-            updatedNewCalendars,
-          );
-          alert.sendMessage(subject, message);
+          // ! 신규 스케줄 슬랙 알림 전송
+          const { subject, message } = alert.newEventMessage(newEventNumbers, updatedNewCalendars);
+          await alert.sendMessage(subject, message);
 
           report.addDetail('UPDATE_NEW_CALENDARS', { count: updatedNewCalendars.size });
         });
-
-        // // LOG 생성 목록 보여주기 (추후 로깅으로 변경)
-        // for (const [key, value] of updatedNewCalendars) {
-        //   console.log(`${key}: `, value.extendedProperties?.shared);
-        // }
       }
 
       // ! 6-b. 변경 데이터 캘린더 업데이트
@@ -152,40 +143,45 @@ export const scrapeOrchestrator = async (startDate: string, endDate: string) => 
           report.addDetail('UPDATE_CHANGED_CALENDARS', {
             count: updatedChangedCalendars.size + deletedCalendars.size,
           });
+
+          // ! 변경 스케줄 슬랙 알림 전송
+          const { subject, message } = alert.changedEventMessage(diffEventFieldValues);
+          await alert.sendMessage(subject, message);
         });
 
-        // 세부 변경 사항 확인
+        // 세부 변경 사항 리포팅
         report.addDetail('UPDATE_CHANGED_CALENDARS', {
-          diff: util.inspect(diffEventFieldValue, { depth: null, colors: true }),
+          diff: diffEventFieldValues,
         });
-
-        // // LOG 수정 목록 보여주기 (추후 로깅으로 변경)
-        // for (const [key, value] of updatedChangedCalendars) {
-        //   console.log(`${key}: `, value.extendedProperties?.shared);
-        // }
       }
+      return report.build();
     }
   } catch (err: unknown) {
-    // 치명적인 에러를 슬랙 알림 등 알림 처리를 함
     report.setStatus('FAILED');
-    let step;
-    let message;
+    let step: string;
+    let message: string;
+    let stack: string | undefined;
+
     if (err instanceof FatalError) {
       step = (err.context?.step as string) ?? err.name;
       message = err.message;
-      log(LogLevel.ERROR, { step, message });
+      stack = err.stack;
     } else {
       if (err instanceof Error) {
         step = err.name;
         message = err.message;
-        log(LogLevel.ERROR, { step: err.name, message: err.message });
+        stack = err.stack;
       } else {
         step = 'UNCLASSIFIED_ERROR';
-        message = '알 수 없는 오류가 발생했습니다.';
-        log(LogLevel.ERROR, { step, message });
+        message = '알 수 없는 오류';
       }
     }
+    log(LogLevel.ERROR, { step, message });
     report.addIssue(LogLevel.ERROR, { step, message, error: err });
+
+    // 알림 전송
+    const { subject, message: errMessage } = alert.errorMessage(step, message, stack);
+    await alert.sendMessage(subject, errMessage);
   } finally {
     // report 형태가 출력되게 할 것
     return report.build();

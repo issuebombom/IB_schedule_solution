@@ -1,13 +1,25 @@
+import { getStartEndDate } from '../modules/utils/getDateRange';
+import { validateYearMonthRange } from '../modules/utils/validator';
 import { scrapeOrchestrator } from '../orchestrator/scrapeOrchestrator';
 
 // 서버리스 환경에서의 실행용
 export const handler = async (event: IScrapeHandler) => {
-  // TODO: 람다 등에서 현재 시각을 기준으로 이번달 + 다음달 설정이 가능하도록
-  await scrapeOrchestrator(event.startDate, event.endDate);
-  return { ok: true };
+  let report;
+  // 파라미터 입력값이 있을 경우 validation
+  const isValid = validateYearMonthRange(event);
+  if (isValid) {
+    report = await scrapeOrchestrator(event.startYearMonth, event.endYearMonth);
+  } else {
+    // 디폴트 실행
+    const { startYearMonth, endYearMonth } = getStartEndDate(new Date(), 1);
+    report = await scrapeOrchestrator(startYearMonth, endYearMonth);
+  }
+
+  console.dir(report, { depth: null });
+  return report;
 };
 
 interface IScrapeHandler {
-  startDate: string;
-  endDate: string;
+  startYearMonth: string;
+  endYearMonth: string;
 }
