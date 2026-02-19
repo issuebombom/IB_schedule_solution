@@ -1,4 +1,4 @@
-import { Page, PuppeteerLifeCycleEvent, TimeoutError } from 'puppeteer-core';
+import { TimeoutError } from 'puppeteer-core';
 import { FatalError, RequestTimeoutError } from './appError';
 import { log, LogLevel } from './logger';
 
