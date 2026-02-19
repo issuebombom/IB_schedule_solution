@@ -20,12 +20,21 @@ export enum RedisNamespace {
 export const saveCacheToRedis = async (
   cacheMap: ParsedWingsSchedules | ParsedGoogleCalendar,
   namespace: RedisNamespace,
+  ttlSeconds: number = 60 * 60 * 24 * 30 * 2, // 두 달
 ) => {
   const payload: Record<string, WingsSchedulesValues | ParsedBatchResponse> =
     Object.fromEntries(cacheMap);
 
   try {
     await redis.hset(namespace, payload);
+
+    // Field TTL 적용
+    if (ttlSeconds && ttlSeconds > 0) {
+      const fields = Object.keys(payload);
+      if (fields.length > 0) {
+        await redis.hexpire(namespace, fields, ttlSeconds);
+      }
+    }
 
     log(LogLevel.INFO, {
       step: 'REDIS_SAVE_DATA_SUCCESS',
@@ -44,10 +53,9 @@ export const saveCacheToRedis = async (
 // Redis ( { eNumber: values } ) -> Map
 // upstash를 사용해서 parse 생략
 export const loadCacheSchedulesFromRedis = async (
-  cacheMap: ParsedWingsSchedules,
+  keys: string[],
   namespace: RedisNamespace,
 ): Promise<ParsedWingsSchedules | 'No Cache'> => {
-  const keys: string[] = [...cacheMap.keys()];
   try {
     const cacheData: Record<string, WingsSchedulesValues> | null = await redis.hmget(
       `${namespace}`,
@@ -80,10 +88,9 @@ export const loadCacheSchedulesFromRedis = async (
 // Redis ( { eNumber: values } ) -> Map
 // upstash를 사용해서 parse 생략
 export const loadCacheCalendarFromRedis = async (
-  cacheMap: ParsedGoogleCalendar,
+  keys: string[],
   namespace: RedisNamespace,
 ): Promise<ParsedGoogleCalendar | 'No Cache'> => {
-  const keys: string[] = [...cacheMap.keys()];
   try {
     const cacheData: Record<string, ParsedBatchResponse> | null = await redis.hmget(
       `${namespace}`,
