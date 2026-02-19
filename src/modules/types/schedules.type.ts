@@ -72,3 +72,13 @@ export type ParsedWingsSchedules = z.infer<typeof parsedWingsSchedulesSchema>;
 type ValueOfZodMap<T extends z.ZodMap<any, any>> =
   T extends z.ZodMap<any, infer V> ? z.infer<V> : never;
 export type WingsSchedulesValues = ValueOfZodMap<typeof parsedWingsSchedulesSchema>;
+
+export type DiffEventFieldValue = {
+  eventNumber: string;
+  eventName: string;
+  place: string;
+  startTime: string;
+  eventField: string;
+  prevValue: string | string[];
+  currValue: string | string[];
+};

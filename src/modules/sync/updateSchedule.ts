@@ -1,4 +1,4 @@
-import { ParsedWingsSchedules, WingsSchedulesValues } from '../types/schedules.type';
+import { DiffEventFieldValue, ParsedWingsSchedules } from '../types/schedules.type';
 import { log, LogLevel } from '../utils/logger';
 
 // Map의 경우 key가 없으면 신규 등록, 있으면 덮어쓴다.
@@ -37,7 +37,7 @@ export const compareWingsSchedules = (
   const diffEventNumbers: Set<string> = new Set();
 
   // 세부 변동 사항은 알림용을 보관
-  const diffEventFieldValue: Record<string, string | string[]>[] = [];
+  const diffEventFieldValues: DiffEventFieldValue[] = [];
 
   for (const [currKey, currValue] of currSchedules) {
     // 최신 이벤트 넘버를 예전 스케줄 Map에 대입
@@ -56,13 +56,15 @@ export const compareWingsSchedules = (
         if (fieldKey === 'details' && prevValue[fieldKey].join() === currValue[fieldKey].join())
           continue;
 
-        // { 이벤트 넘버, 이벤트명, 필드, 기존값, 변동값 }
-        diffEventFieldValue.push({
-          eventNum: currKey,
+        // 변동사항이 발견된 이벤트 정보 수집
+        diffEventFieldValues.push({
+          eventNumber: currKey,
           eventName: currValue.eventName,
+          place: currValue.place,
+          startTime: currValue.startTime,
           eventField: field,
           prevValue: prevValue[fieldKey],
-          currVaule: currValue[fieldKey],
+          currValue: currValue[fieldKey],
         });
 
         // 차이가 있는 이벤트 넘버 획득
@@ -77,5 +79,5 @@ export const compareWingsSchedules = (
     message: `발견된 신규 스케줄: ${newEventNumbers.size} | 발견된 변동 스케줄: ${diffEventNumbers.size}`,
   });
 
-  return { newEventNumbers, diffEventNumbers, diffEventFieldValue };
+  return { newEventNumbers, diffEventNumbers, diffEventFieldValues };
 };
