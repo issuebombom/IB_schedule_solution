@@ -1,10 +1,21 @@
 export type ParsedBatchResponse = {
-  kind?: string;
-  id?: string;
-  status?: string;
-  htmlLink?: string;
-  extendedProperties?: {
-    shared: Record<string, number | string | number[] | string[]>;
+  kind: string;
+  id: string;
+  status: string;
+  htmlLink: string;
+  extendedProperties: {
+    shared: {
+      eventName: string;
+      startTime: string;
+      endTime: string;
+      manager: string;
+      place: string;
+      type: string;
+      status: string;
+      eventNumber: string;
+      eventRsvnNumber: string;
+      detail: string;
+    };
   };
   [k: string]: any;
 };
