@@ -181,7 +181,7 @@ export const scrapeOrchestrator = async (startDate: string, endDate: string) => 
       }
     }
     log(LogLevel.ERROR, { step, message });
-    report.addIssue(LogLevel.ERROR, { step, message, error: err });
+    report.addIssue(LogLevel.ERROR, { step, message, error: stack });
 
     // 알림 전송
     const { subject, message: errMessage } = alert.errorMessage(step, message, stack);
