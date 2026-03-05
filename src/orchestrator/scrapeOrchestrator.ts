@@ -132,7 +132,11 @@ export const scrapeOrchestrator = async (startDate: string, endDate: string) => 
         await report.step('UPDATE_CHANGED_CALENDARS', async () => {
           const { updatedCalendars: updatedChangedCalendars, deletedCalendars } =
             await updateChangedCalendarEvents(diffEventNumbers, currSchedules, cacheCalendar);
-          await saveCacheToRedis(updatedChangedCalendars, RedisNamespace.GOOGLE_CALENDAR_EVENTS);
+
+          // 변경 사항에 대한 UPDATE
+          if (updatedChangedCalendars.size > 0) {
+            await saveCacheToRedis(updatedChangedCalendars, RedisNamespace.GOOGLE_CALENDAR_EVENTS);
+          }
 
           // 변경 사항에 대한 DELETE
           if (deletedCalendars.size > 0)

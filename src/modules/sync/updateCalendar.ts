@@ -76,13 +76,16 @@ export const updateChangedCalendarEvents = async (
   }
 
   // 내용 변경된 캘린더 정보 업데이트
-  const updatedCalendars = await updateBatchGoogleCalendarEvent(changedSchedules, cacheCalendar);
+  let updatedCalendars: ParsedGoogleCalendar = new Map();
+  if (changedSchedules.length > 0) {
+    updatedCalendars = await updateBatchGoogleCalendarEvent(changedSchedules, cacheCalendar);
 
-  // ! LOG
-  log(LogLevel.INFO, {
-    step: 'UPDATE_CALENDAR',
-    message: `총 ${updatedCalendars.size}개의 캘린더 이벤트를 수정했습니다.`,
-  });
+    // ! LOG
+    log(LogLevel.INFO, {
+      step: 'UPDATE_CALENDAR',
+      message: `총 ${updatedCalendars.size}개의 캘린더 이벤트를 수정했습니다.`,
+    });
+  }
 
   return { updatedCalendars, deletedCalendars };
 };
