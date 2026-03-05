@@ -138,6 +138,7 @@ export const deleteBatchGoogleCalendarEvent = async (eventIds: Map<string, strin
     body += `Content-Type: application/http\r\n`;
     body += `Content-ID: <item${idx + 1}: ${eventNumber}>\r\n\r\n`;
     body += `DELETE /calendar/v3/calendars/${encodeURIComponent(ENV.GOOGLE_CALENDAR_ID)}/events/${eventId}\r\n`;
+    idx += 1;
   });
   body += `--${boundary}--`;
 
