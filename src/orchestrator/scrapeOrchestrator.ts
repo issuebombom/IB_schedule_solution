@@ -24,7 +24,8 @@ import { ENV } from '../../env';
 // 스크랩 실행 함수
 export const scrapeOrchestrator = async (startDate: string, endDate: string) => {
   const report = new ReportCollector({ startDate, endDate });
-  const alert = new SlackAlert(ENV.SLACK_SCHEADULE_CHANNEL_ID, ENV.SLACK_BOT_TOKEN);
+  const notice = new SlackAlert(ENV.SLACK_SCHEADULE_CHANNEL_ID, ENV.SLACK_BOT_TOKEN);
+  const warning = new SlackAlert(ENV.SLACK_LOG_CHANNEL_ID, ENV.SLACK_BOT_TOKEN);
 
   try {
     // ! 1. 로그인 및 세션ID 획득 (retry 3)
@@ -116,8 +117,8 @@ export const scrapeOrchestrator = async (startDate: string, endDate: string) => 
           await saveCacheToRedis(updatedNewCalendars, RedisNamespace.GOOGLE_CALENDAR_EVENTS);
 
           // ! 신규 스케줄 슬랙 알림 전송
-          const { subject, message } = alert.newEventMessage(newEventNumbers, updatedNewCalendars);
-          await alert.sendMessage(subject, message);
+          const { subject, message } = notice.newEventMessage(newEventNumbers, updatedNewCalendars);
+          await notice.sendMessage(subject, message);
 
           report.addDetail('UPDATE_NEW_CALENDARS', { count: updatedNewCalendars.size });
         });
@@ -149,8 +150,8 @@ export const scrapeOrchestrator = async (startDate: string, endDate: string) => 
           });
 
           // ! 변경 스케줄 슬랙 알림 전송
-          const { subject, message } = alert.changedEventMessage(diffEventFieldValues);
-          await alert.sendMessage(subject, message);
+          const { subject, message } = notice.changedEventMessage(diffEventFieldValues);
+          await notice.sendMessage(subject, message);
         });
 
         // 세부 변경 사항 리포팅
@@ -184,8 +185,8 @@ export const scrapeOrchestrator = async (startDate: string, endDate: string) => 
     report.addIssue(LogLevel.ERROR, { step, message, error: stack });
 
     // 알림 전송
-    const { subject, message: errMessage } = alert.errorMessage(step, message, stack);
-    await alert.sendMessage(subject, errMessage);
+    const { subject, message: errMessage } = warning.errorMessage(step, message, stack);
+    await warning.sendMessage(subject, errMessage);
   } finally {
     // report 형태가 출력되게 할 것
     return report.build();

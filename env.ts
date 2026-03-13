@@ -20,6 +20,7 @@ const envSchema = z.object({
 
   SLACK_BOT_TOKEN: z.string().min(1),
   SLACK_SCHEADULE_CHANNEL_ID: z.string().min(1),
+  SLACK_LOG_CHANNEL_ID: z.string().min(1),
 });
 
 // 2. process.env 검증 및 결과 객체 생성
