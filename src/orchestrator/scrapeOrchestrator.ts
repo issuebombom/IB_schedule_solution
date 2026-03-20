@@ -23,6 +23,8 @@ import { ENV } from '../../env';
 
 // 스크랩 실행 함수
 export const scrapeOrchestrator = async (startDate: string, endDate: string) => {
+  const CALENDAR_REQUEST_LIMIT = ENV.GOOGLE_CALENDAR_REQUEST_LIMIT;
+
   const report = new ReportCollector({ startDate, endDate });
   const notice = new SlackAlert(ENV.SLACK_SCHEADULE_CHANNEL_ID, ENV.SLACK_BOT_TOKEN);
   const warning = new SlackAlert(ENV.SLACK_LOG_CHANNEL_ID, ENV.SLACK_BOT_TOKEN);
@@ -113,6 +115,13 @@ export const scrapeOrchestrator = async (startDate: string, endDate: string) => 
         // 구글 캘린더 및 캐시 캘린더 업데이트
         // NOTE: 구글 캘린더 업데이트 후 응답 데이터를 캐시로 저장해야 하므로 기다려야 함
         await report.step('UPDATE_NEW_CALENDARS', async () => {
+          // 신규 이벤트 수가 LIMIT을 초과할 경우 INFO
+          if (newEventNumbers.size > CALENDAR_REQUEST_LIMIT) {
+            report.addIssue(LogLevel.WARN, {
+              step: 'UPDATE_NEW_CALENDARS',
+              message: `요청수 한도 초과로 ${CALENDAR_REQUEST_LIMIT}개의 이벤트만 등록됩니다. (${newEventNumbers.size}/${CALENDAR_REQUEST_LIMIT}`,
+            });
+          }
           const updatedNewCalendars = await updateNewCalendarEvents(newEventNumbers, currSchedules);
           await saveCacheToRedis(updatedNewCalendars, RedisNamespace.GOOGLE_CALENDAR_EVENTS);
 

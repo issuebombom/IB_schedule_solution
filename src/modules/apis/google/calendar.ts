@@ -23,6 +23,7 @@ const calendar = google.calendar({ version: 'v3', auth: authClient });
  * REF: https://developers.google.com/workspace/calendar/api/guides/batch
  *
  * 공식 문서에 따라 multipart/mixed로 POST 요청을 한다.
+ * queries per minute per user가 600이므로 분당 요청수가 600을 초과하면 rate limit이 발생한다.
  * 응답 데이터는 Text로 받으므로 gzip으로 받고, 이후 파싱 진행
  * 파싱 결과 구성은 eventNumber로 접근 시 캘린더의 eventId 획득을 골자로 한다.
  * 해당 기능은 응답을 기다려야 하며, 데이터양에 따른 서버 블로킹을 유발하므로 필요 시 백그라운드에서 수행할 것이 고려된다.
@@ -30,6 +31,7 @@ const calendar = google.calendar({ version: 'v3', auth: authClient });
 export const createBatchGoogleCalendarEvent = async (
   events: WingsSchedulesValues[],
 ): Promise<ParsedGoogleCalendar> => {
+  const requestLimit = ENV.GOOGLE_CALENDAR_REQUEST_LIMIT;
   const batchRequestUrl = 'https://www.googleapis.com/batch/calendar/v3';
   const boundary = 'batch_boundary';
   const responseFieldsQuery = 'fields=kind,id,status,htmlLink,extendedProperties/shared'; // 응답 데이터 필드 선택 (전체를 받지 않음)
@@ -37,7 +39,8 @@ export const createBatchGoogleCalendarEvent = async (
 
   let body = '';
 
-  events.forEach((event, idx) => {
+  // batchLimit 인덱스 이상의 데이터는 처리하지 않는다.
+  events.slice(0, requestLimit).forEach((event, idx) => {
     body += `--${boundary}\r\n`;
     body += `Content-Type: application/http\r\n`;
     body += `Content-ID: <item${idx + 1}: ${event.eventNumber}>\r\n\r\n`;
@@ -72,27 +75,16 @@ export const updateBatchGoogleCalendarEvent = async (
   events: WingsSchedulesValues[],
   cacheCalendar: ParsedGoogleCalendar,
 ): Promise<ParsedGoogleCalendar> => {
-  const batchLimit = 1000;
+  const requestLimit = 50;
   const batchRequestUrl = 'https://www.googleapis.com/batch/calendar/v3';
   const boundary = 'batch_boundary';
   const responseFieldsQuery =
     'sendUpdates=all&fields=kind,id,status,htmlLink,extendedProperties/shared'; // 응답 데이터 필드 선택 (전체를 받지 않음)
   const { token: accessToken } = await authClient.getAccessToken(); // 배치는 accessToken을 요구한다.
 
-  // ! 1000개 이상 Batch를 올릴 수 없다.
-  if (events.length > batchLimit) {
-    throw new FatalError(
-      'EXCEED_BATCH_LIMIT',
-      `구글 캘린더 배치 한도수를 초과했습니다. ${events.length}/${batchLimit}`,
-      {
-        count: events.length,
-      },
-    );
-  }
-
   let body = '';
 
-  events.forEach((event, idx) => {
+  events.slice(0, requestLimit).forEach((event, idx) => {
     const calendar = cacheCalendar.get(event.eventNumber);
 
     body += `--${boundary}\r\n`;
