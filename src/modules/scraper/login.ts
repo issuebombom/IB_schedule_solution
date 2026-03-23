@@ -69,7 +69,10 @@ export const wingsLogin = async () => {
     const sessionCookie = getSessionCookie(cookies);
 
     // ! LOG
-    log(LogLevel.INFO, { step, message: '세션 쿠키 획득' });
+    log(LogLevel.INFO, {
+      step,
+      message: `세션 쿠키 획득 | ${sessionCookie.value.slice(0, 5)}*****`,
+    });
 
     if (popupPosition !== 'relative') {
       // 팝업으로 비밀번호를 임시 변경했을 경우 원상복구
