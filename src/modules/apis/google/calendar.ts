@@ -1,11 +1,11 @@
+import axios from 'axios';
 import { JWT } from 'google-auth-library';
 import { ENV } from '../../../../env';
 import { google } from 'googleapis';
 import { WingsSchedulesValues } from '../../types/schedules.type';
-import axios from 'axios';
 import { parseBatchGoogleResponse, parseGoogleCalendar } from '../../parser/parseCalendar';
 import { ParsedGoogleCalendar } from '../../types/calendar.type';
-import { FatalError } from '../../utils/appError';
+import { PlaceColorIdMapper } from './colorIdMapper';
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
@@ -176,7 +176,7 @@ const createEventRequestTemplate = (s: WingsSchedulesValues) => {
     summary: `[${s.place.slice(0, 3)}] ${s.eventName}`, // [장소명] 행사명
     description: descriptionTemplate(s),
     location: s.place,
-    colorId: (Math.floor(s.place.trim().length % 11) + 1).toString(), // 1 ~ 11 값으로 이벤트 색상 지정
+    colorId: PlaceColorIdMapper.getColorId(s.place.trim()), // 1 ~ 11 값으로 이벤트 색상 지정
     start: {
       dateTime: s.startTime,
       timeZone: 'Asia/Seoul',

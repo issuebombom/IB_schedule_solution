@@ -15,6 +15,7 @@ const envSchema = z.object({
   GOOGLE_PRIVATE_KEY: z.string().min(1),
   GOOGLE_CALENDAR_ID: z.string().min(1),
   GOOGLE_CALENDAR_REQUEST_LIMIT: z.coerce.number().min(1),
+  GOOGLE_CALENDAR_PLACE_HASH_SECRET: z.string().min(1),
 
   UPSTASH_REDIS_REST_URL: z.string().min(1),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1),

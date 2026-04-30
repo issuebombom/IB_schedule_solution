@@ -1,10 +1,10 @@
 import { ENV } from '../../../env';
 import { ParsedWingsSchedules, WingsSchedulesValues } from '../types/schedules.type';
-import { ParsedBatchResponse, ParsedGoogleCalendar } from '../types/calendar.type';
-
+import { ParsedBatchResponse, ParsedGoogleCalendar, PlaceColorIdMap } from '../types/calendar.type';
 import { Redis } from '@upstash/redis';
 import { FatalError } from './appError';
 import { log, LogLevel } from './logger';
+
 const redis = new Redis({
   url: ENV.UPSTASH_REDIS_REST_URL,
   token: ENV.UPSTASH_REDIS_REST_TOKEN,
@@ -13,6 +13,7 @@ const redis = new Redis({
 export enum RedisNamespace {
   WINGS_SCHEDULES = 'wings-schedules',
   GOOGLE_CALENDAR_EVENTS = 'google-calendar-events',
+  GOOGLE_CALENDAR_PLACE_COLOR_ID_MAP = 'google-calendar-place-color-id-map',
 }
 
 // Map -> Redis (namespace: { eNumber: values })
@@ -137,6 +138,29 @@ export const deleteCacheCalendarFromRedis = async (
       'REDIS_DELETE_CALENDAR_FAILED',
       '캐시에서 캘린더 데이터를 삭제하는데 실패했습니다.',
       { namespace, keys },
+      err,
+    );
+  }
+};
+
+// Redis에서 place와 구글 이벤트 colorId 매칭을 위한 JSON GET
+export const loadPlaceColorIdMapFromRedis = async (): Promise<PlaceColorIdMap | 'No Cache'> => {
+  const namespace = RedisNamespace.GOOGLE_CALENDAR_PLACE_COLOR_ID_MAP;
+  try {
+    const map: PlaceColorIdMap | null = await redis.json.get(namespace);
+    if (!map) return 'No Cache';
+
+    log(LogLevel.INFO, {
+      step: 'REDIS_LOAD_PLACE_COLOR_ID_MAP_SUCCESS',
+      message: `캐시 불러오기 성공 | namespace: ${namespace}`,
+    });
+
+    return map;
+  } catch (err) {
+    throw new FatalError(
+      'REDIS_LOAD_PLACE_COLOR_ID_MAP_FAILED',
+      '캐시에서 플레이스-컬러ID 맵을 가져오는데 실패했습니다.',
+      { namespace },
       err,
     );
   }
