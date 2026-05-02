@@ -14,6 +14,7 @@ import {
   updateChangedCalendarEvents,
   updateNewCalendarEvents,
 } from '../modules/sync/updateCalendar';
+import { PlaceColorIdMapper } from '../modules/apis/google/colorIdMapper';
 import { initCacheCalendar } from '../modules/sync/initializeCache';
 import { FatalError } from '../modules/utils/appError';
 import { log, LogLevel } from '../modules/utils/logger';
@@ -28,6 +29,8 @@ export const scrapeOrchestrator = async (startDate: string, endDate: string) => 
   const report = new ReportCollector({ startDate, endDate });
   const notice = new SlackAlert(ENV.SLACK_SCHEADULE_CHANNEL_ID, ENV.SLACK_BOT_TOKEN);
   const warning = new SlackAlert(ENV.SLACK_LOG_CHANNEL_ID, ENV.SLACK_BOT_TOKEN);
+
+  PlaceColorIdMapper.load(); // placeColorId 맵 데이터 가져오기
 
   try {
     // ! 1. 로그인 및 세션ID 획득 (retry 3)
