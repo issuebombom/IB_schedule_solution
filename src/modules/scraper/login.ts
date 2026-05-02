@@ -86,6 +86,8 @@ export const wingsLogin = async () => {
   } finally {
     if (browser) {
       await browser.close();
+      // ! LOG
+      log(LogLevel.INFO, { step, message: '브라우저 종료 완료' });
     }
   }
 };

@@ -23,7 +23,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@sparticuz/chromium": "^143.0.4",
+    "@sparticuz/chromium": "147.0.2",
     "@upstash/redis": "^1.35.8",
     "axios": "^1.13.2",
     "date-fns": "^4.1.0",
@@ -31,7 +31,7 @@
     "dotenv": "^17.2.3",
     "google-auth-library": "^10.5.0",
     "googleapis": "^167.0.0",
-    "puppeteer-core": "^24.34.0",
+    "puppeteer-core": "24.42.0",
     "zod": "^4.1.13"
   }
 }
