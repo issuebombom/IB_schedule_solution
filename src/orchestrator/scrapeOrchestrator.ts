@@ -30,7 +30,7 @@ export const scrapeOrchestrator = async (startDate: string, endDate: string) => 
   const notice = new SlackAlert(ENV.SLACK_SCHEADULE_CHANNEL_ID, ENV.SLACK_BOT_TOKEN);
   const warning = new SlackAlert(ENV.SLACK_LOG_CHANNEL_ID, ENV.SLACK_BOT_TOKEN);
 
-  PlaceColorIdMapper.load(); // placeColorId 맵 데이터 가져오기
+  await PlaceColorIdMapper.load(); // placeColorId 맵 데이터 가져오기
 
   try {
     // ! 1. 로그인 및 세션ID 획득 (retry 3)
