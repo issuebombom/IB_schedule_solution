@@ -21,7 +21,7 @@ export enum RedisNamespace {
 export const saveCacheToRedis = async (
   cacheMap: ParsedWingsSchedules | ParsedGoogleCalendar,
   namespace: RedisNamespace,
-  ttlSeconds: number = 60 * 60 * 24 * 30 * 2, // 두 달
+  ttlSeconds: number = 60 * 60 * 24 * 30 * 3, // 두 달
 ) => {
   const payload: Record<string, WingsSchedulesValues | ParsedBatchResponse> =
     Object.fromEntries(cacheMap);
